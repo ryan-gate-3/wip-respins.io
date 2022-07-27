@@ -55,7 +55,11 @@ class FrontendController
         return view('respins::games-list', compact('games', 'games_count', 'thumbnail_prefix', 'providers', 'scaffold', 'seo'));
     }
     
-
+    public function gameErrorPage()
+    {   
+        return BaseFunctions::errorRouting('400', 'Failed to load game.');
+    }
+    
     public function gameCategories()
     {   
         $category = Category::where('bonusplay', '=', $slug)->firstOrFail();
@@ -67,11 +71,18 @@ class FrontendController
         return view('respins::games-list', compact('games', 'games_count', 'thumbnail_prefix', 'categories'));
     }
 
+    public function gamesLauncher($slug)
+    {   
+        return view('respins::games-launcher')->with('slug', $slug);
+    }
+            /*
+
+
     public function gamesLauncher(Request $request)
     { 
         $content = $request->gamecontent;
         $appendJS = $request->appended_js;
-            /*
+
                     return Blade::render(
                         'Hello, {{ $name }}',
                         ['name' => 'Julian Bashir'],
@@ -82,8 +93,8 @@ class FrontendController
             </script><script>
             var app = <?php echo json_encode($array); ?>;
             </script>
-            */
         return view('respins::games-launcher')->with('content', $request);
     }
+            */
 
 }

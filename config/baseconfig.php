@@ -3,16 +3,15 @@
 return [
 
     'access' => [
-        'cloudflare_mode' => false, // Used for IP retrieval
-        'lock_web' => true, // Locks down web routes to only server & admin IP access
-        'lock_api' => true, //Locks down api routes to only server & admin IP access
-        'admin_ip' => '172.21.0.2',
         'url' => env('APP_URL'),
+        'admin_ip' => '109.37.128.201',
+        'whitelist_ips' => '109.37.128.201:cloudflare,109.37.128.202:direct', // whitelist ips for access to the app in format "ip:type", type is either direct or cloudflare
     ],
 
-    'caching' => [ // Caching length options are in seconds, followed by the function it is used
-        'length_getProvider' => 1,
-        'length_getGames' => 1,
+    'caching' => [ // Caching length is in seconds, most caching is used within DataController. Advise is to set most caching options to 300 (5 minutes).
+        'length_getWhitelistIPs' => 60,
+        'length_getProvider' => 0,
+        'length_getGames' => 0,
     ],
 
     'frontend' => [
@@ -20,7 +19,7 @@ return [
         'thumbnail_cdn' => 'https://cdn2.softswiss.net/arlekincasino/i/s2/',
         'include' => "@extends('theme::layouts.app')",
         'launcher_url' => env('APP_URL', 'localhost'),
-        'launcher_path' => 'respins.io/play-launcher',
+        'launcher_path' => 'web/respins.io/games/launch',
         'gameslist' => [
             'games_per_page' => '24',
             'show_provider_nav' => true,

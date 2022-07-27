@@ -29,7 +29,6 @@ class BaseFunctionsServiceProvider extends PackageServiceProvider
 
             $this->app->router->pushMiddlewareToGroup('web', \Respins\BaseFunctions\Middleware\RespinsIPCheck::class);
             $this->app->router->pushMiddlewareToGroup('api', \Respins\BaseFunctions\Middleware\RespinsIPCheck::class);
-            $this->app->router->pushMiddlewareToGroup('web', \Respins\BaseFunctions\Middleware\OverrideHome::class);
             $this->loadLivewireComponents();
 
      }
@@ -38,8 +37,12 @@ class BaseFunctionsServiceProvider extends PackageServiceProvider
     private function loadLivewireComponents()
     {
         Livewire::component('navigation-bar', \Respins\BaseFunctions\Controllers\Livewire\NavigationBar::class); 
-        Livewire::component('dashboard', \Respins\BaseFunctions\Controllers\Livewire\NavigationBar::class); 
-        Livewire::component('datalogger-viewer', \Respins\BaseFunctions\Controllers\Livewire\DataLoggerViewer::class); 
+        Livewire::component('games-launcher', \Respins\BaseFunctions\Controllers\Livewire\GamesLauncher::class); 
+        Livewire::component('games-list', \Respins\BaseFunctions\Controllers\Livewire\GamesList::class); 
+        Livewire::component('maintenance-clear-cache', \Respins\BaseFunctions\Controllers\Livewire\MaintenancePanel::class); 
+
+        
+
     }
 }
 

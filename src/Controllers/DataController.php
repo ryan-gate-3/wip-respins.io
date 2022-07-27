@@ -10,6 +10,7 @@ use Respins\BaseFunctions\BaseFunctions;
 use Respins\BaseFunctions\Traits\ApiResponseHelper;
 use Respins\BaseFunctions\Models\RawGameslist;
 use Respins\BaseFunctions\Models\Gameslist;
+use Respins\BaseFunctions\Models\WhitelistIPs;
 
 class DataController
 {
@@ -24,6 +25,19 @@ class DataController
 
         $value = Cache::remember('cache:getProviders', $cache_length, function () {
             return RawGameslist::rawProviders();
+        });
+        return $value;
+    }
+
+    public static function getWhitelistIPs()
+    {   
+        $cache_length = config('baseconfig.caching.length_getWhitelistIPs');
+        if($cache_length === 0) {
+            return collect(WhitelistIPs::collect_ips());
+        }
+
+        $value = Cache::remember('cache:getWhitelistIPs', $cache_length, function () {
+            return collect(WhitelistIPs::collect_ips());
         });
         return $value;
     }

@@ -24,7 +24,8 @@ class GameSessions extends Eloquent  {
     ];  
 
     protected $casts = [
-        'extra_meta' => 'json'
+        'extra_meta' => 'json',
+        'user_agent' => 'json'
     ];
 
 }

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('state', 155);
             $table->string('operator_id', 255);
             $table->json('extra_meta', 1500);
+            $table->json('user_agent', 1500);
             $table->integer('games_amount');
             $table->boolean('expired_bool');
             $table->timestamps();

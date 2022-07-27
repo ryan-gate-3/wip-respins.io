@@ -8,6 +8,35 @@ use Illuminate\Http\Request;
 class BaseFunctions
 {
     
+    public static function requestIP(Request $request) 
+    {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        if($ip === NULL || !$ip) {
+            $ip = $request->header('CF-Connecting-IP');
+            if($ip === NULL) {
+              $ip = $request->ip();  
+            }
+        }
+        return $ip;
+    }
+
+    public static function testingRedirect(Request $request)
+    {
+        $controller = $request->controller;
+        $class = $request->class;
+        $prefix_class = $request->prefix_class;
+
+        if($prefix_class !== 'Models') {
+            if($prefix_class !== 'Controllers') {
+                return 'Either use Models or Controllers in prefix_class';
+            }
+        }
+
+        $controller = '\Respins\BaseFunctions\\'.$prefix_class.'\\'.$controller.'::'.$class;
+        return $controller();
+        return $controller;
+    }
+
     // Helper intended to parse "in_between" values mainly for html content (resource intensive)
     public static function in_between($a, $b, $data) 
     {
@@ -57,13 +86,41 @@ class BaseFunctions
 
         return false; //signature not matching, returning false
 
-
+ 
     }
 
     public static function messageHelper($message)
     {
         $message = array('message' => $message);
         return $message;
+    }
+    
+    public static function responseOk(?array $data = null)
+    {
+        $data ??= [];
+        $data = self::morphToArray($data);
+
+        $response = array(
+            "state" => "Ok",
+            "data" => $data, 
+            "code" => 200,
+        );
+
+        return response()->json($response, 200);
+    }
+    
+    public static function responseError(?array $data = null)
+    {
+        $data ??= [];
+        $data = self::morphToArray($data);
+
+        $response = array(
+            "state" => "Ok",
+            "data" => $data, 
+            "code" => 400,
+        );
+
+        return response()->json($response, 400);
     }
 
     public static function helperGamelink() {

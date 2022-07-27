@@ -27,6 +27,7 @@ class SessionController
         $player_id = $request->player_id;
         $token = $request->token;
         $entry_securekey = $request->entry;
+        $agent = $request->header('user-agent');
 
         $select_session = SessionController::sessionData($request->player_id, $request->token);
         if($select_session === false) {
@@ -56,7 +57,9 @@ class SessionController
             Log::critical('No launcher behaviour specified for method. Either disable games or add launcher behaviour to gameconfig.php. Session: '.json_encode($final_session_data));
             return BaseFunctions::errorRouting(400, 'Bad request. No launcher behaviour specified.');
         }
-        
+        $headers = getallheaders();
+        SessionController::sessionUpdate($player_id, $token, 'user_agent', array('retrieved_headers' => $headers, 'player_ip' => BaseFunctions::requestIP($request)));
+
         $request_game_session = $game_controller::requestSession($final_session_data);
 
         if($request_game_session === false) {
@@ -80,44 +83,42 @@ class SessionController
 
     # Dummy example:
     # /api/respins.io/aggregation/createSession?game=softswiss:AlohaKingElvis&currency=USD&mode=real&player=croco&operator_key=1235523523523
-    public function createSession(Request $request)
+    public static function createSession($data)
     {   
-        $validate = $this->createSessionValidation($request);
-        if($validate->status() !== 200) {
-            return $validate;
-        }
-
-        /* IMPORTANT SELF NOTE V */        
-        // todo, retrieve & validate operator auth: $operator_check = AuthController~~~
-        $operator_id = $request->operator_key; // ^ to change to operator ID
-
-        $collection = collect(DataController::getGames());
-        $select_game = $collection->where('slug', $request->game)->where('internal_enabled', 1)->first();
-
-        if(!$select_game) { // Game not found or enabled
-            $search_disabled = $collection->where('slug', $request->game)->where('internal_enabled', 0)->first(); 
-            if($search_disabled) {
-                $prepareResponse = array('message' => 'Game found, however this game is disabled.', 'request_ip' => $request->ip());
-            } else {
-                $prepareResponse = array('message' => 'Game not found', 'request_ip' => $request->ip());
-            }
-            return $this->respondError($prepareResponse);
-        }
-
         /* IMPORTANT SELF NOTE V */        
         // todo: $currency_check = self::currencyValidation();
-        $currency = $request->currency; // ^ to change to validated currency symbol
-        $player_id = $request->player;
+        // todo, retrieve & validate operator auth: $operator_check = AuthController~~~
+
+        $operator_key = $data['operator_key'];
+        $game = $data['game'];
+        $request_ip = $data['request_ip'];
+        $game_mode = $data['mode'];
+        $operator_id = $data['operator_key']; // ^ to change to operator ID
+        $currency = $data['currency'];
+        $player_id = $data['player'];
+        
+        $collection = collect(DataController::getGames());
+        $select_game = $collection->where('slug', $game)->where('internal_enabled', 1)->first();
+
+        if(!$select_game) { // Game not found or enabled
+            $search_disabled = $collection->where('slug', $game)->where('internal_enabled', 0)->first(); 
+            if($search_disabled) {
+                $prepareResponse = array('status' => 'error', 'message' => 'Game found, however this game is disabled.', 'request_ip' => $request_ip);
+            } else {
+                $prepareResponse = array('status' => 'error', 'message' => 'Game not found', 'request_ip' => $request_ip);
+            }
+            return $prepareResponse;
+        }
 
         $invalidate_previous_init = self::invalidatePrev($player_id, $operator_id);
         if($invalidate_previous_init === false) { // Return error, as for some reason we were unable to invalidate previous sessions
-            $prepareResponse = array('message' => 'Critical error, please contact your account manager ASAP. Try using different player_id.', 'request_ip' => $request->ip());
-            return $this->respondError($prepareResponse);
+            $prepareResponse = array('status' => 'error', 'message' => 'Critical error, please contact your account manager ASAP. Try using different player_id.', 'request_ip' => $request_ip);
+            return $prepareResponse;
         }
 
         $extra_meta = [
             'provider' => $select_game->provider,
-            'mode' => $request->mode,
+            'mode' => $game_mode,
         ];
         $token_generation = Str::orderedUuid();
         $prepend_session_object = array(
@@ -125,6 +126,7 @@ class SessionController
             'operator_id' => $operator_id,
             'game_id' => $select_game->slug,
             'extra_meta' => json_encode($extra_meta),
+            'user_agent' => '[]',
             'token_internal' => $token_generation,
             'currency' => $currency,
             'game_id_original' => $select_game->gid,
@@ -141,11 +143,11 @@ class SessionController
         $entry_signature = BaseFunctions::generate_sign($token_generation);
         $session_url = config('gameconfig.session_entry_url').'?token='.$token_generation.'&entry='.$entry_signature.'&player_id='.$player_id;
         
-        $prepareResponse = array('message' => array('session_data' => $prepend_session_object, 'session_url' => $session_url), 'request_ip' => $request->ip());
-        return $this->respondOk($prepareResponse);
+        $prepareResponse = array('status' => 'success', 'message' => array('session_data' => $prepend_session_object, 'session_url' => $session_url), 'request_ip' => $request_ip);
+        return $prepareResponse;
     }
 
-    public function invalidatePrev($player, $operator) 
+    public static function invalidatePrev($player, $operator) 
     {
         try {
             GameSessions::where('player_id', $player)
@@ -240,37 +242,6 @@ class SessionController
         return $this->respondOk();
 
     }
-
-    public function createSessionValidation(Request $request) {
-        $validator = Validator::make($request->all(), [
-            'game' => ['required', 'max:30', 'min:3'],
-            'currency' => ['required', 'min:2', 'max:40'],
-            'player' => ['required', 'min:3', 'max:100', 'regex:/^[^(\|\]`!%^&=};:?><’)]*$/'],
-            'currency' => ['required', 'min:2', 'max:7'],
-            'operator_key' => ['required', 'min:10', 'max:50'],
-            'mode' => ['required', 'min:2', 'max:15'],
-        ]);
-
-        $ip = $_SERVER['REMOTE_ADDR'];
-        if($ip === NULL || !$ip) {
-            $ip = $request->header('CF-Connecting-IP');
-            if($ip === NULL) {
-              $ip = $request->ip();  
-            }
-        }
-
-        if ($validator->stopOnFirstFailure()->fails()) {
-            $errorReason = $validator->errors()->first();
-            $prepareResponse = array('message' => $errorReason, 'request_ip' => $ip);
-            return $this->respondError($prepareResponse);
-        }
-
-        if($request->mode !== 'real') {
-            $prepareResponse = array('message' => 'Mode can only be \'demo\' or \'real\'.', 'request_ip' => $ip);
-            return $this->respondError($prepareResponse);
-        }
-
-        return $this->respondOk();
-    }
+ 
 
 }

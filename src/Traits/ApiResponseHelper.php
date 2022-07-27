@@ -76,6 +76,7 @@ trait ApiResponseHelper
         return $this;
     }
 
+    
     public function respondOk(?array $data = null): JsonResponse
     {   
         $data ??= [];
